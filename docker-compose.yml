@@ -1,0 +1,16 @@
+services:
+  lighttpd-docker:
+    image: lighttpd-sebp-updated
+    container_name: lighttpd-docker
+    volumes:
+      - /opt/docker/lighttpd-docker/varwww:/var/www/localhost/htdocs
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 6685:80
+    networks:
+      - revproxy-net
+    # command: chown lighttpd:lighttpd /var/run/docker.sock
+    tty: true
+networks:
+  revproxy-net:
+    external: true
