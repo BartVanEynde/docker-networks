@@ -4,14 +4,16 @@ services:
     container_name: docker-networks-dev
     network_mode: bridge # join default bridge
     volumes:
-      - /opt/docker/lighttpd-docker/varwww:/var/www/localhost/htdocs
+      - /opt/docker/docker-networks-dev/varwww:/var/www/localhost/htdocs
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - 7001:80
-#    networks:
-#      - dev-net
+    #    networks:
+    #      - dev-net
     # command: chown lighttpd:lighttpd /var/run/docker.sock
     tty: true
+networks: {}
+
 # networks:
 #  dev-net:
 #    external: true
