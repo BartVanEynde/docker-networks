@@ -1,5 +1,11 @@
 FROM alpine
 
+LABEL maintainer="Bart Van Eynde <docker@bartvaneynde.be>"
+LABEL description "An insight in docker networking by visualizing the json info in html tables"
+LABEL github_url="https://gitea.g4f.be/bart/docker-networks"
+LABEL org.opencontainers.image.source https://gitea.g4f.be/bart/docker-networks
+LABEL org.opencontainers.image.description "An insight in docker networking by visualizing the json info in html tables"
+
 RUN apk add --update --no-cache \
 	lighttpd \
     php84-cgi \
