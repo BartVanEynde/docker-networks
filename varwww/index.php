@@ -29,6 +29,25 @@ foreach( $networks as $k=>$n ) {
 	$details[$n['Name']] = get_docker_data('http://localhost/v1.45/networks/' . $n['Name']);
 }
 $networks = array(); // free some mem...
+
+foreach ($details as $k=>$d) {
+    $network_name = $d['Name'];
+    // if( in_array( $network_name, array('bridge','null','host','overlay','ipvlan','macvlan') ) ) continue
+
+    if( isset( $d['IPAM']['Config'][0]['Subnet'] ) ) {
+        $details[$k]['Subnet'] = $d['IPAM']['Config'][0]['Subnet'];
+    } else {
+        $details[$k]['Subnet']  = '??';
+    }
+
+    $details[$k]['used_ips'] = count( $d['Containers'] );
+    if( isset( $d['IPAM']['Config'][0]['Gateway'] ) ) {
+        $details[$k]['used_ips']++;
+    }
+    $details[$k]['total_ips'] = calculate_total_ips($details[$k]['Subnet']);
+    $details[$k]['available_ips'] = $details[$k]['total_ips'] - $details[$k]['used_ips'] - 2;
+}
+
 $images = get_docker_data( 'http://localhost/v1.45/images/json' ); 
 $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' ); 
 
@@ -241,6 +260,9 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
     <!-- Navigation Bar -->
     <nav>
         <div class="title"><a href="/">Docker Networks</a></div>
+        <div>
+            <a href="#ipam">IP</a>
+        </div>
         <div class="search-container">
             <button class="clear-btn" id="clearSearchBtn" style="display:none;">Clear</button>
             <input type="search" id="searchBar" placeholder="Search...">
@@ -257,78 +279,67 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
 
     <!-- Main Content -->
     <div class="container">
-        <h1 id="networks">Networks <nbsp> <sup id="table1-span">0</sup></h1>
+
+    <!-- ----------------------------------------------------------------------------------------------------------- -->
+    <!-- Network table                                                                                               -->
+    <!-- 1 line per network                                                                                          -->
+    <!-- ----------------------------------------------------------------------------------------------------------- -->
+        <h1 class="section-title" id="networks">
+            Networks <nbsp> <sup id="networks-span">0</sup>
+        </h1>
         <div class="table-container">
-            <table id="table1">
+            <table id="networks-table">
                 <thead>
                     <tr>
-                        <th onclick="sortTable(0, 'table1')">Name</th>
-                        <th onclick="sortTable(1, 'table1')">Driver</th>
-                        <th onclick="sortTable(2, 'table1')">Project</th>
-                        <th onclick="sortTable(3, 'table1')">Subnet</th>
-                        <th onclick="sortTable(4, 'table1')">Total</th>
-                        <th onclick="sortTable(5, 'table1')">Used</th>
-                        <th onclick="sortTable(6, 'table1')">Available</th>
+                        <th onclick="sortTable(0, 'networks-table', false)">Name</th>
+                        <th onclick="sortTable(1, 'networks-table', false)">Driver</th>
+                        <th onclick="sortTable(2, 'networks-table', false)">Defined in</th>
+                        <th onclick="sortTable(3, 'networks-table', false)">Subnet</th>
+                        <th onclick="sortTable(4, 'networks-table', true)">Total</th>
+                        <th onclick="sortTable(5, 'networks-table', true)">Used</th>
+                        <th onclick="sortTable(6, 'networks-table', true)">Available</th>
                     </tr>
                 </thead>
                 <tbody>
 <?php
-
-                        foreach ($details as $d) {
-                            $network_name = $d['Name'];
-                        // if( in_array( $network_name, array('bridge','null','host','overlay','ipvlan','macvlan') ) ) continue
-
-                        if( isset( $d['IPAM']['Config'][0]['Subnet'] ) ) {
-                            $subnet = $d['IPAM']['Config'][0]['Subnet'];
-                        } else {
-                            $subnet = '??';
-                        }
-
-                        $used_ips = count( $d['Containers'] );
-                        if( isset( $d['IPAM']['Config'][0]['Gateway'] ) ) {
-                            $used_ips++;
-                        }
-
-                        if( isset( $d['IPAM']['Config'][0]['Subnet'] ) ) {
-                            $subnet = $d['IPAM']['Config'][0]['Subnet'];
-                        } else {
-                            $subnet = '??';
-                        }
-
-                            // Bereken IP-adressen
-                            $total_ips = calculate_total_ips($subnet);
-                            $available_ips = $total_ips - $used_ips - 2;
-
-                            echo "                    <tr>";
-                            echo "<td>{$network_name}</td>";
-                            echo "<td>{$d['Driver']}</td>";
-                            echo "<td>".($d['Labels']['com.docker.compose.project']?:"<i>Default</i>")."</td>";
-                            echo "<td>$subnet</td>";
-                            //echo "<td>$total_ips</td>";
-                            //echo "<td>".($d['Labels']['com.docker.compose.project']?:"<i>Default</i>")."</td>";
-                            echo "<td>".($d['Labels']['com.docker.compose.project']? "$total_ips" :"??")."</td>";
-
-                            echo "<td>$used_ips</td>";
-                            //echo "<td>$available_ips</td>";
-                            echo "<td>".($d['Labels']['com.docker.compose.project']? "$available_ips" :"??")."</td>";
-
-                            echo "</tr>\n";
-                        }
-
-                    ?>
+                foreach ($details as $d) {
+                    echo "                    <tr>";
+                    echo "<td>".( str_ends_with($d['Name'], '_default') ? "<span style='font-style: italic;' title='It seems you have no name defined...'>".$d['Name']."</span>" : $d['Name'] )."</td>";
+                    echo "<td>{$d['Driver']}</td>";
+                    echo "<td>".($d['Labels']['com.docker.compose.project']?:"<i>Default</i>")."</td>";
+                    echo "<td>{$d['Subnet']}</td>";
+                    echo "<td>".($d['Labels']['com.docker.compose.project']? $d['total_ips'] :"??")."</td>";
+                    echo "<td>".($d['used_ips']<=2? "<span style='color: red;' title='I hope you have future plans with this...'>".$d['used_ips']."</span>" :$d['used_ips'])."</td>"; 
+                    echo "<td>".($d['Labels']['com.docker.compose.project']? $d['available_ips'] :"??")."</td>";
+                    echo "</tr>\n";
+                }
+?>
                 </tbody>
             </table>
         </div>
 
-        <h1 id="ipam">IPAM <span id="table2-span">(0)</span></h1>
+
+
+    <!-- ----------------------------------------------------------------------------------------------------------- -->
+    <!-- IPAM - IP address management                                                                                -->
+    <!-- 1 line per IP per container - a container with 2 IP's has here 2 lines...                                   -->
+    <!-- ----------------------------------------------------------------------------------------------------------- -->
+        <h1 class="section-title" id="ipam">
+            IPAM <nbsp> <sup id="ipam-span">0</sup>
+            <a href="#top" class="back-to-top" aria-label="Back to top">
+                <svg viewBox="0 0 24 24">
+                <path d="M12 4l-8 8h5v8h6v-8h5z"/>
+                </svg>
+            </a>
+        </h1>
         <div class="table-container">
-            <table id="table2">
+            <table id="ipam-table">
                 <thead>
                     <tr>
-                        <th onclick="sortTable(0, 'table2')">Hosts</th>
-                        <th onclick="sortTable(1, 'table2')">IPv4</th>
-                        <th onclick="sortTable(2, 'table2')">Subnet</th>
-                        <th onclick="sortTable(3, 'table2')">Network</th>
+                        <th onclick="sortTable(0, 'ipam-table', false)">Hosts</th>
+                        <th onclick="sortTable(1, 'ipam-table', false)">IPv4</th>
+                        <th onclick="sortTable(2, 'ipam-table', false)">Subnet</th>
+                        <th onclick="sortTable(3, 'ipam-table', false)">Network</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -336,6 +347,7 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
                     <?php
                 foreach ($details as $d) {
 
+                    // gataway IP's
                     foreach( $d['IPAM']['Config'] as $ipam ) {
                         print "                    <tr>";
                         print "<td>Gateway</td>";
@@ -345,6 +357,7 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
                         print "</tr>\n";
                     }
 
+                    // Container IP's
                     foreach( $d['Containers'] as $k=>$c ) {
                         print "                    <tr>";
                         print "<td>{$c['Name']}</td>";
@@ -360,26 +373,38 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
             </table>
         </div>
 
-        <h1 id="ports">Ports <span id="table3-span">(0)</span></h1>
+    <!-- ----------------------------------------------------------------------------------------------------------- -->
+    <!-- Ports                                                                                                       -->
+    <!-- 1 line per IP per container - a container with 2 IP's has here 2 lines...                                   -->
+    <!-- ----------------------------------------------------------------------------------------------------------- -->
+        <h1 class="section-title" id="ports">
+            Ports <nbsp> <sup id="ports-span">0</sup>
+            <a href="#top" class="back-to-top" aria-label="Back to top">
+                <!-- Simple up arrow SVG icon -->
+                <svg viewBox="0 0 24 24">
+                <path d="M12 4l-8 8h5v8h6v-8h5z"/>
+                </svg>
+            </a>
+        </h1>
         <div class="table-container">
-            <table id="table3">
+            <table id="ports-table">
                 <thead>
                     <tr>
-                        <th onclick="sortTable(0, 'table3')">PublicPort</th>
-                        <!-- th onclick="sortTable(1, 'table3')">IP</th -->
-                        <th onclick="sortTable(2, 'table3')">Type</th>
-                        <th onclick="sortTable(3, 'table3')">PrivatePort</th>
-                        <th onclick="sortTable(4, 'table3')">Container</th>
-                        <th onclick="sortTable(5, 'table3')">Image</th>
+                        <th onclick="sortTable(0, 'ports-table', true)">PublicPort</th>
+                        <!-- th onclick="sortTable(1, 'ports-table', false)">IP</th -->
+                        <th onclick="sortTable(1, 'ports-table', false)">Type</th>
+                        <th onclick="sortTable(2, 'ports-table', true)">PrivatePort</th>
+                        <th onclick="sortTable(3, 'ports-table', false)">Container</th>
+                        <th onclick="sortTable(4, 'ports-table', false)">Image</th>
                     </tr>
                 </thead>
                 <tbody>
 
-                    <?php
+<?php
                 foreach ($containers as $c) {
 
                     foreach( $c['Ports'] as $k=>$p ) {
-			if( $p['IP']=="::" ) continue;
+			            if( $p['IP']=="::" ) continue;
 
                         print "                    <tr>";
                         print "<td>{$p['PublicPort']}</td>";
@@ -387,29 +412,47 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
                         print "<td>{$p['Type']}</td>";
                         print "<td>{$p['PrivatePort']}</td>";
                         print "<td>".substr( $c['Names'][0], 1 )."</td>";
-                        print "<td>". ( str_contains($c['Image'], ":") ? substr( $c['Image'], 0, strpos($c['Image'], ":") ) : $c['Image'] )."</td>";
+                        // print "<td>". ( str_contains($c['Image'], ":") ? substr( $c['Image'], 0, strpos($c['Image'], ":") ) : $c['Image'] )."</td>";
+                        // print "<td>". ( str_contains($c['Image'], ":") ? substr( $c['Image'], 0, strpos($c['Image'], ":") ) : $c['Image'] )."</td>";
+                        print "<td>". ( str_contains($c['Image'], ":") ? ( str_contains($c['Image'], "sha256") ? substr( $c['ImageID'], strpos($c['ImageID'], ":")+1, 12 ) : substr( $c['Image'], 0, strpos($c['Image'], ":") ) ) : $c['Image'] )."</td>";
+
                         print "</tr>\n";
                     }
 
                 }
-                ?>
+?>
                 </tbody>
             </table>
         </div>
 
-        <h1 id="images">Images <span id="table4-span">(0)</span></h1>
+
+
+
+    <!-- ----------------------------------------------------------------------------------------------------------- -->
+    <!-- Images                                                                                                      -->
+    <!-- 1 line per IP per container - a container with 2 IP's has here 2 lines...                                   -->
+    <!-- ----------------------------------------------------------------------------------------------------------- -->
+    <h1 class="section-title" id="images">
+            Images <nbsp> <sup id="images-span">0</sup>
+            <a href="#top" class="back-to-top" aria-label="Back to top">
+                <!-- Simple up arrow SVG icon -->
+                <svg viewBox="0 0 24 24">
+                <path d="M12 4l-8 8h5v8h6v-8h5z"/>
+                </svg>
+            </a>
+        </h1>
         <div class="table-container">
-            <table id="table4">
+            <table id="images-table">
                 <thead>
                     <tr>
-                        <th onclick="sortTable(0, 'table4')">Image</th>
-                        <th onclick="sortTable(1, 'table4')">Tag</th>
-                        <th onclick="sortTable(2, 'table4')">ImageID</th>
-                        <th onclick="sortTable(3, 'table4')">#Running</th>
-                        <th onclick="sortTable(4, 'table4')">#Used</th>
-                        <th onclick="sortTable(5, 'table4')">MB</th>
-                        <th onclick="sortTable(6, 'table4')">Created</th>
-                        <th onclick="sortTable(7, 'table4')">Labels</th>
+                        <th onclick="sortTable(0, 'images-table', false)">Image</th>
+                        <th onclick="sortTable(1, 'images-table', false)">Tag</th>
+                        <th onclick="sortTable(2, 'images-table', false)">ImageID</th>
+                        <th onclick="sortTable(3, 'images-table', true)">#Running</th>
+                        <th onclick="sortTable(4, 'images-table', true)">#Used</th>
+                        <th onclick="sortTable(5, 'images-table', true)">MB</th>
+                        <th onclick="sortTable(6, 'images-table', false)">Created</th>
+                        <th onclick="sortTable(7, 'images-table', false)">Labels</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -440,7 +483,7 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
                     print "<td>".substr( $img['Id'], strpos($img['Id'], ":")+1, 12 )."</td>";
                 //    print "<td>". ( $img_used_running>0 ? $img_used_running : "<span style='color: red;font-weight: bold'>".$img_used_running."</span>" ) ."</td>";
                     print "<td>". ( $img_used_running>0 ? ( $img_used_running==1 ? $img_used_running : "<span style='font-weight: bold'>".$img_used_running."</span>" ) : "<span style='color: red;'>".$img_used_running."</span>" ) ."</td>";
-                    print "<td>". ( $img_used>0 ? ( $img_used==1 ? $img_used : "<span style=';font-weight: bold'>".$img_used."</span>" ) : "<span style='color: red;'>".$img_used."</span>" ) ."</td>";
+                    print "<td>". ( $img_used>0 ? ( $img_used==1 ? $img_used : "<span style='font-weight: bold'>".$img_used."</span>" ) : "<span style='color: red;'>".$img_used."</span>" ) ."</td>";
                 //    print "<td>". ( $img_used>0 ? $img_used : "<span style='color: red;font-weight: bold'>".$img_used."</span>" ) ."</td>";
                     print "<td>".str_pad( round($img['Size']/1024/1024 ,0), 8, ' ', STR_PAD_LEFT)."</td>";
                     print "<td><span title=\"".gmdate("Y-m-d\TH:i:s\Z", $img['Created'])."\">".gmdate("Y-m-d", $img['Created'])."</span></td>";
@@ -474,9 +517,13 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
         </div>
 
 
-        <h1 id="section-title">
-            Containers
-            <span id="table5-span">(0)</span>
+ 
+    <!-- ----------------------------------------------------------------------------------------------------------- -->
+    <!-- Containers                                                                                                  -->
+    <!-- 1 line per IP per container - a container with 2 IP's has here 2 lines...                                   -->
+    <!-- ----------------------------------------------------------------------------------------------------------- -->
+        <h1 class="section-title" id="containers">
+            Containers <nbsp> <sup id="containers-span">0</sup>
             <a href="#top" class="back-to-top" aria-label="Back to top">
                 <!-- Simple up arrow SVG icon -->
                 <svg viewBox="0 0 24 24">
@@ -484,20 +531,19 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
                 </svg>
             </a>
         </h1>
-
         <div class="table-container">
-            <table id="table5">
+            <table id="containers-table">
                 <thead>
                     <tr>
-                        <th onclick="sortTable(0, 'table5')">Container</th>
-                        <th onclick="sortTable(1, 'table5')">ContainerId</th>
-                        <th onclick="sortTable(2, 'table5')">Image</th>
-                        <th onclick="sortTable(3, 'table5')">ImageID</th>
-                        <th onclick="sortTable(4, 'table5')">Network</th>
-                        <th onclick="sortTable(5, 'table5')">IP</th>
-                        <th onclick="sortTable(6, 'table5')">State</th>
-                        <th onclick="sortTable(7, 'table5')">Status</th>
-                        <th onclick="sortTable(8, 'table5')">Ports</th>
+                        <th onclick="sortTable(0, 'containers-table', false)">Container</th>
+                        <th onclick="sortTable(1, 'containers-table', false)">ContainerId</th>
+                        <th onclick="sortTable(2, 'containers-table', false)">Image</th>
+                        <th onclick="sortTable(3, 'containers-table', false)">ImageID</th>
+                        <th onclick="sortTable(4, 'containers-table', false)">Network</th>
+                        <th onclick="sortTable(5, 'containers-table', false)">IP</th>
+                        <th onclick="sortTable(6, 'containers-table', false)">State</th>
+                        <th onclick="sortTable(7, 'containers-table', false)">Status</th>
+                        <th onclick="sortTable(8, 'containers-table', true)">Ports</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -521,19 +567,23 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
                         print "                    <tr>";
                         print "<td>".substr( $c['Names'][0], 1 )."</td>";
                         print "<td>".substr( $c['Id'], strpos($c['Id'], ":")+1, 12 )."</td>";
-
-            //          print "<td>". ( str_contains($c['Image'], ":") ? substr( $c['Image'], 0, strpos($c['Image'], ":") ) : $c['Image'] )."</td>";
                         print "<td>". ( str_contains($c['Image'], ":") ? ( str_contains($c['Image'], "sha256") ? substr( $c['ImageID'], strpos($c['ImageID'], ":")+1, 12 ) : substr( $c['Image'], 0, strpos($c['Image'], ":") ) ) : $c['Image'] )."</td>";
-
                         print "<td>".substr( $c['ImageID'], strpos($c['ImageID'], ":")+1, 12 )."</td>";
 
                         print "<td>{$n}</td>";
 			
                         print "<td>". ( $nn['IPPrefixLen']==0 ? "-" : "{$nn['IPAddress']}/{$nn['IPPrefixLen']}" ) ."</td>";
-                        print "<td>{$c['State']}</td>";
-                        print "<td>{$c['Status']}</td>";
-                        //print "<td>". implode( " - ", sort(array_keys($ports)) ) ."</td>";
-                        print "<td>".implode( " - ", array_keys($ports) )."</td>";
+                        print "<td>". ( $c['State']=="running" ? $c['State'] : "<span style='font-style: italic'>".$c['State']."</span>" ) ."</td>";
+
+                        // print "<td>". str_replace( array('Up'), array("<span style='color: green;font-weight: bold'>".$img_used."</span>"), $c['Status'] ) ."</td>";
+                        // print "<td>". str_replace( array('Up','unhealthy','healthy'), array("<span style='color: green;'>Up</span>","<span style='color: red;'>unhealthy</span>","<span style='color: green;'>healthy</span>"), $c['Status'], 1 ) ."</td>";
+                        // print "<td>". str_replace( array('unhealthy','healthy'), array("<span style='color: red;'>unhealthy</span>","<span style='color: green;'>healthy</span>"), $c['Status'] ) ."</td>";
+
+                        print "<td>". strtr( $c['Status'], array('unhealthy'=>"<span style='color: red;'>unhealthy</span>",'healthy'=>"<span style='color: green;'>healthy</span>") ) ."</td>";
+
+
+
+                        print "<td align='right'>".implode( " - ", array_keys($ports) )."</td>";
 
                         print "</tr>\n";
 		    }
@@ -542,19 +592,32 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
                 </tbody>
             </table>
         </div>
+
+    <!-- ----------------------------------------------------------------------------------------------------------- -->
+
+
+
+        
     </div>
 
     <script>
         let isAscending = true;
 
         // Sorting function for tables
-        function sortTable(colIndex, tableId) {
+        function sortTable(colIndex, tableId, isNumeric) {
             const table = document.getElementById(tableId);
             const rows = Array.from(table.rows).slice(1); // Skip header row
             const sortedRows = rows.sort((a, b) => {
-                const cellA = a.cells[colIndex].innerText;
-                const cellB = b.cells[colIndex].innerText;
-                return isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+                if (isNumeric) {
+                    const aCell = a.cells[colIndex].innerText.trim();
+                    const bCell = b.cells[colIndex].innerText.trim();
+                    // return parseFloat(aCell) - parseFloat(bCell);
+                    return isAscending ? parseFloat(bCell) - parseFloat(aCell) : parseFloat(aCell) - parseFloat(bCell);
+                } else {
+                    const cellA = a.cells[colIndex].innerText;
+                    const cellB = b.cells[colIndex].innerText;
+                    return isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+                }
             });
 
             isAscending = !isAscending; // Toggle sorting direction
@@ -580,7 +643,7 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
             clearBtn.style.display = 'none';
 
             table_ids.forEach(table_id => {
-                const table = document.getElementById( table_id );
+                const table = document.getElementById( table_id.concat("-table") );
                 const rows = Array.from(table.querySelectorAll('tbody tr'));
                 row_count = 0;
 
@@ -589,15 +652,20 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
                     row_count++;
                 });
                 let sum_id = table_id.concat("-span");
-                document.getElementById(sum_id).innerHTML = row_count==0 ? '' : ' '+row_count;
+                // document.getElementById(sum_id).innerHTML = row_count==0 ? ' ' : ' '+row_count;
+                document.getElementById(sum_id).innerHTML = row_count;
+                document.getElementById(table_id).style.display = '';
+                document.getElementById(table_id.concat("-table")).style.display = '';
+
             });
         }
 
         // Search functionality for filtering rows
         const searchInput = document.getElementById('searchBar');
         const clearBtn = document.getElementById('clearSearchBtn');
-        const tables = [document.getElementById('table1'), document.getElementById('table2'), document.getElementById('table3'), document.getElementById('table4'), document.getElementById('table5')];
-        const table_ids = ['table1','table2','table3','table4','table5'];
+        // const tables = [document.getElementById('networks-table'), document.getElementById('ipam-table'), document.getElementById('ports-table'), document.getElementById('images-table'), document.getElementById('containers-table')];
+        // const table_ids = ['networks-table','ipam-table','ports-table','images-table','tablcontainers-table'];
+        const table_ids = ['networks','ipam','ports','images','containers'];
 
 
         // Listen for input in the search bar
@@ -605,16 +673,8 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
             const searchValue = searchInput.value.toLowerCase();
             clearBtn.style.display = searchValue ? 'inline-block' : 'none';
 
-        //    tables.forEach(table => {
-        //        const rows = Array.from(table.querySelectorAll('tbody tr'));
-        //        rows.forEach(row => {
-        //            const rowText = row.innerText.toLowerCase();
-        //            row.style.display = rowText.includes(searchValue) ? '' : 'none';
-        //        });
-        //    });
-
             table_ids.forEach(table_id => { 
-                const table = document.getElementById( table_id );
+                const table = document.getElementById( table_id+'-table' );
                 const rows = Array.from(table.querySelectorAll('tbody tr'));
                 row_count = 0;
                 rows.forEach(row => {
@@ -627,7 +687,16 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
                     }
                 });
                 let sum_id = table_id.concat("-span");
-                document.getElementById(sum_id).innerHTML = row_count==0 ? '' : ' '+row_count;
+                document.getElementById(sum_id).innerHTML = row_count;
+                if (row_count==0) {                                                                 // Hide empty blocks
+                    document.getElementById(table_id).style.display = 'none';                       //  h1 title
+                    document.getElementById(table_id.concat("-table")).style.display = 'none';      // table
+                } else {
+                    document.getElementById(table_id).style.display = '';                           //  h1 title
+                    document.getElementById(table_id.concat("-table")).style.display = '';          // table
+
+                }
+
             })
 
         });
@@ -640,30 +709,7 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
 
 
         
-        clearBtn.addEventListener('click2', function () {
-                searchInput.value = '';
-            clearBtn.style.display = 'none';
 
-        //    tables.forEach(table => {
-        //        const rows = table.querySelectorAll('tbody tr');
-        //        rows.forEach(row => {
-        //            row.style.display = '';
-        //        });
-        //    });
-
-            table_ids.forEach(table_id => {
-                const table = document.getElementById( table_id );
-                const rows = Array.from(table.querySelectorAll('tbody tr'));
-                row_count = 0;
-
-                rows.forEach(row => {
-                    row.style.display = '';
-                    row_count++;
-                });
-                let sum_id = table_id.concat("-span");
-                document.getElementById(sum_id).innerHTML = row_count==0 ? '' : ' '+row_count;
-            });
-        });
 
         // Toggle the navigation menu for mobile
         const hamburger = document.getElementById('hamburger');
