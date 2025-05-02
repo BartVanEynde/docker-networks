@@ -29,7 +29,7 @@
     * As long if you don't do this all grep/filters are done with the same data
 
 ## Links
-* https://github.com/BartVanEynde/docker-networks⁠
+* https://github.com/BartVanEynde/docker-networks⁠/
 * https://hub.docker.com/r/bartvaneynde/docker-networks
   * Have a look at the 'dev' branch and build your own container if you are not using 'amd64'
 * https://hub.docker.com/r/sebp/lighttpd <-- based on this image
