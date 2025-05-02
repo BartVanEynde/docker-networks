@@ -1,10 +1,10 @@
 FROM alpine
 
 LABEL maintainer="Bart Van Eynde <docker@bartvaneynde.be>"
-LABEL description "An insight in docker networking by visualizing the json info in html tables"
-LABEL github_url="https://gitea.g4f.be/bart/docker-networks"
-LABEL org.opencontainers.image.source https://gitea.g4f.be/bart/docker-networks
-LABEL org.opencontainers.image.description "An insight in docker networking by visualizing the json info in html tables"
+LABEL description "Visualizing docker networking by converting the json info into html tables"
+LABEL github_url="https://github.com/BartVanEynde/docker-networks"
+LABEL org.opencontainers.image.source https://github.com/BartVanEynde/docker-networks
+LABEL org.opencontainers.image.description "An insight in docker networking by visualizing the json info into html tables"
 
 RUN apk add --update --no-cache \
 	lighttpd \
