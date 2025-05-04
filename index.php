@@ -49,13 +49,28 @@ foreach ($details as $k=>$d) {
 }
 
 $images = get_docker_data( 'http://localhost/v1.45/images/json' ); 
+$lut_images = array();
+foreach ($images as $k=>$v) {
+    $id_12 = substr( $v['Id'], strpos($v['Id'], ":")+1, 12 );
+
+    list( $repo, $tag ) = explode( ":", $v['RepoTags'][0], 2 );
+    if( $repo=="" ){
+        list( $repo, $dummy ) = explode( "@", $v['RepoDigests'][0], 2 );
+    }
+    //$lut_images[$id_12] = $repo;
+    $lut_images[$v['Id']] = $repo;
+}
+
+
+
+
+
 $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' ); 
 
 
 
 
-?>
-<!DOCTYPE html>
+?><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -63,11 +78,40 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
     <title>Docker Networks</title>
     <link id="favicon" rel="shortcut icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAABM0lEQVR4nO3UPUvDYBTF8R8uvuAkCKJDcVMRtOAijq5WcOiX0C/h6CboJn4AcXHV3UUQXBWlCC4KIr538JVACqWQNm2TdGj/cOG5IXBO7rl56NGjdQr4Cys4Z06xykBwzpw8DsOa1w0ZFxr0qWdcbNBHMYrZJDLON+ij2MNHp/6UYXyGU3pFLsnMCzF2YrHqWVCbSWZejLETSzUGnnGNWxxjrZ3M4+xEEMF7jYnqOpciI1jFVYT4GxaCF/fxXcdl0lXGEWYqTssZCZcwhv7aUd1lZGA9KquzDMQfMBhlYLuTXx+wkrL4KfrUYRgvKYnfY0IMtlLKfS6OeGUKpQTFLzGlSabDkbUj/IVdDGmRcRzgp0nh4FrdwaSEyGEjNHOBx/DG/MUTbnAS7s4yBpIS7tF9/AOXlmL2R+jpvAAAAABJRU5ErkJggg==">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+        :root {
+            --bg-color: #121212;
+            --text-color: #ffffff;
+            --zebra-color: #444444;
+            --accent-color:rgb(255, 162, 0);
         }
+
+        body.light {
+            --bg-color: #ffffff;
+            --text-color: #121212;
+            --zebra-color: #eeeeee;
+            --accent-color: rgb(255, 162, 0);
+        }
+
+        html {
+            margin: 0;
+            height: 100%;
+            box-sizing: border-box;
+        }
+        body {
+            position: relative;
+            margin: 0;
+            padding: 0 0 6rem 0;
+            min-height: 100%;
+            font-family: "Helvetica Neue", Verdana, Arial, sans-serif;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+        *,
+        *:before,
+        *:after {
+            box-sizing: inherit;
+        }
+
 
         /* Navigation Bar */
         nav {
@@ -133,7 +177,7 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
             display: block;
             color: white;
             text-align: center;
-            padding: 16px;
+            padding: 0px 5px;
             text-decoration: none;
         }
 
@@ -197,8 +241,28 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
          }
 
         h1 .back-to-top:hover svg {
-            fill: #0077cc;
+            fill: var(--accent-color);
         }
+
+        .footer {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            padding: 1rem;
+            background-color: #666666;
+            text-align: center;
+        }
+        .footer a {
+            text-decoration: none;
+            color: white;
+        }
+        .footer a:hover {
+            text-decoration: none;
+            color: var(--accent-color);
+        }
+
+
         /* Responsive design for mobile */
         @media (max-width: 768px) {
             .hamburger {
@@ -270,7 +334,7 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
         }
 
         tr:nth-child(even) {
-            background-color: #f9f9f9;
+            background-color: var(--zebra-color);;
         }
 
         /* Scrollable table */
@@ -302,7 +366,6 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
             <li id="ports-icon"><a href="#ports" aria-label="Ports"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' version='1'%3E%3Cpath fill='%23FFFFFF' d='M9 6V11H7V7H5V11H3V9H1V21H3V19H5V21H7V19H9V21H11V19H13V21H15V19H17V21H19V19H21V21H23V9H21V11H19V7H17V11H15V6H13V11H11V6H9M3 13H5V17H3V13M7 13H9V17H7V13M11 13H13V17H11V13M15 13H17V17H15V13M19 13H21V17H19V13Z'%3E%3C/path%3E%3C/svg%3E" /></a></li>
             <li id="images-icon"><a href="#images" aria-label="Images"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' version='1'%3E%3Cpath fill='%23FFFFFF' d='M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z'%3E%3C/path%3E%3C/svg%3E" /></a></li>
             <li id="containers-icon"><a href="#containers" aria-label="Containers"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' version='1'%3E%3Cpath fill='%23FFFFFF' d='M21,16.5C21,16.88 20.79,17.21 20.47,17.38L12.57,21.82C12.41,21.94 12.21,22 12,22C11.79,22 11.59,21.94 11.43,21.82L3.53,17.38C3.21,17.21 3,16.88 3,16.5V7.5C3,7.12 3.21,6.79 3.53,6.62L11.43,2.18C11.59,2.06 11.79,2 12,2C12.21,2 12.41,2.06 12.57,2.18L20.47,6.62C20.79,6.79 21,7.12 21,7.5V16.5M12,4.15L6.04,7.5L12,10.85L17.96,7.5L12,4.15M5,15.91L11,19.29V12.58L5,9.21V15.91M19,15.91V9.21L13,12.58V19.29L19,15.91Z'%3E%3C/path%3E%3C/svg%3E" /></a></li>
-
         </ul>
         <div class="search-container">
             <button class="clear-btn" id="clearSearchBtn" style="display:none;">Clear</button>
@@ -421,7 +484,6 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
         <h1 class="section-title" id="ports">
             Ports <nbsp> <sup id="ports-span">0</sup>
             <a href="#top" class="back-to-top" aria-label="Back to top">
-                <!-- Simple up arrow SVG icon -->
                 <svg viewBox="0 0 24 24">
                 <path d="M12 4l-8 8h5v8h6v-8h5z"/>
                 </svg>
@@ -443,7 +505,6 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
 
 <?php
                 foreach ($containers as $c) {
-
                     foreach( $c['Ports'] as $k=>$p ) {
 			            if( $p['IP']=="::" ) continue;
 
@@ -453,13 +514,9 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
                         print "<td>{$p['Type']}</td>";
                         print "<td style='text-align: right;'>{$p['PrivatePort']}</td>";
                         print "<td>".substr( $c['Names'][0], 1 )."</td>";
-                        // print "<td>". ( str_contains($c['Image'], ":") ? substr( $c['Image'], 0, strpos($c['Image'], ":") ) : $c['Image'] )."</td>";
-                        // print "<td>". ( str_contains($c['Image'], ":") ? substr( $c['Image'], 0, strpos($c['Image'], ":") ) : $c['Image'] )."</td>";
-                        print "<td>". ( str_contains($c['Image'], ":") ? ( str_contains($c['Image'], "sha256") ? substr( $c['ImageID'], strpos($c['ImageID'], ":")+1, 12 ) : substr( $c['Image'], 0, strpos($c['Image'], ":") ) ) : $c['Image'] )."</td>";
-
+                        print "<td>{$lut_images[$c['ImageID']]}</td>";
                         print "</tr>\n";
                     }
-
                 }
 ?>
                 </tbody>
@@ -471,12 +528,11 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
 
     <!-- ----------------------------------------------------------------------------------------------------------- -->
     <!-- Images                                                                                                      -->
-    <!-- 1 line per IP per container - a container with 2 IP's has here 2 lines...                                   -->
+    <!-- 1 line per IP per image                                                                                     -->
     <!-- ----------------------------------------------------------------------------------------------------------- -->
     <h1 class="section-title" id="images">
             Images <nbsp> <sup id="images-span">0</sup>
             <a href="#top" class="back-to-top" aria-label="Back to top">
-                <!-- Simple up arrow SVG icon -->
                 <svg viewBox="0 0 24 24">
                 <path d="M12 4l-8 8h5v8h6v-8h5z"/>
                 </svg>
@@ -498,56 +554,62 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
                 </thead>
                 <tbody>
 
-                    <?php
+<?php
                 foreach ($images as $img) {
                     $img_used=0;
                     $img_used_running=0;
-                    list( $repo, $tag ) = explode( ":", $img['RepoTags'][0], 2 );
-			if( $repo=="" ){
-				list( $repo, $dummy ) = explode( "@", $img['RepoDigests'][0], 2 );
-				// $tag=substr( $img['Id'], strpos($img['Id'], ":")+1, 12 );
-                $tag="<span style='color: red;''>?NotUsed?</span>";
-			}
+                    $labels_hide = array( 
+                        'com.docker.compose.image'
+                        ,'com.docker.compose.oneoff'
+                        ,'com.docker.compose.config-hash'
+                        ,'com.docker.compose.image'
+                        ,'com.docker.compose.depends_on'
+                        ,'com.docker.compose.project.config_files'
+                        ,'com.docker.compose.project.working_dir'
+                        ,'com.docker.compose.container-number'
+                        ,'org.opencontainers.image.revision' 
+                        ,'org.opencontainers.image.url'
+                        ,'org.opencontainers.image.created'
+                        ,'org.opencontainers.image.vendor'
+                        ,'com.vmware.cp.artifact.flavor'
+                    );
 
-		    foreach( $containers as $k=>$c ) {
-			    if( $img['Id']==$c['ImageID'] ) {
-			        $img_used++;
-                    if( $c['State']=='running' ) {
-                        $img_used_running++;
+                    list( $repo, $tag ) = explode( ":", $img['RepoTags'][0], 2 );
+                    if( $repo=="" ){
+                        list( $repo, $dummy ) = explode( "@", $img['RepoDigests'][0], 2 );
+                        // $tag=substr( $img['Id'], strpos($img['Id'], ":")+1, 12 );
+                        $tag="<span style='color: red;''>?PrevLatest?</span>";
                     }
-                }
-		    }
+
+                    foreach( $containers as $k=>$c ) {
+                        if( $img['Id']==$c['ImageID'] ) {
+                            $img_used++;
+                            if( $c['State']=='running' ) {
+                                $img_used_running++;
+                            }
+                        }
+                    }
 
                     print "                    <tr>";
                     print "<td>{$repo}</td>";
                     print "<td>{$tag}</td>";
                     print "<td>".substr( $img['Id'], strpos($img['Id'], ":")+1, 12 )."</td>";
-                //    print "<td>". ( $img_used_running>0 ? $img_used_running : "<span style='color: red;font-weight: bold'>".$img_used_running."</span>" ) ."</td>";
-                    print "<td style='text-align: right;'>". ( $img_used_running>0 ? ( $img_used_running==1 ? $img_used_running : "<span style='font-weight: bold'>".$img_used_running."</span>" ) : "<span style='color: red;'>".$img_used_running."</span>" ) ."</td>";
-                    print "<td style='text-align: right;'>". ( $img_used>0 ? ( $img_used==1 ? $img_used : "<span style='font-weight: bold'>".$img_used."</span>" ) : "<span style='color: red;'>".$img_used."</span>" ) ."</td>";
-                //    print "<td>". ( $img_used>0 ? $img_used : "<span style='color: red;font-weight: bold'>".$img_used."</span>" ) ."</td>";
-                    print "<td style='text-align: right;'>".str_pad( round($img['Size']/1024/1024 ,0), 8, ' ', STR_PAD_LEFT)."</td>";
+                    print "<td style='text-align: right;'>". ( $img_used_running>0 
+                                                            ? ( $img_used_running==1 ? $img_used_running : "<span style='font-weight: bold'>".$img_used_running."</span>" ) 
+                                                            : "<span style='color: red;'>".$img_used_running."</span>" ) 
+                                                            ."</td>"; # red if not used, bold is used more than once
+                    print "<td style='text-align: right;'>". ( $img_used>0 
+                                                            ? ( $img_used==1 ? $img_used : "<span style='font-weight: bold'>".$img_used."</span>" ) 
+                                                            : "<span style='color: red;'>".$img_used."</span>" ) 
+                                                            ."</td>";
+                    print "<td style='text-align: right;'>".str_pad( round($img['Size']/1024/1024 ,0), 8, ' ', STR_PAD_LEFT)."</td>";       # using 1MB = 1.048.576B
                     print "<td><span title=\"".gmdate("Y-m-d\TH:i:s\Z", $img['Created'])."\">".gmdate("Y-m-d", $img['Created'])."</span></td>";
-			$labels_hide = array( 
-				 'com.docker.compose.image'
-				,'com.docker.compose.oneoff'
-				,'com.docker.compose.config-hash'
-				,'com.docker.compose.image'
-				,'com.docker.compose.depends_on'
-				,'com.docker.compose.project.config_files'
-				,'com.docker.compose.project.working_dir'
-				,'com.docker.compose.container-number'
-				,'org.opencontainers.image.revision' 
-				,'org.opencontainers.image.url'
-				,'org.opencontainers.image.created'
-				,'org.opencontainers.image.vendor'
-				,'com.vmware.cp.artifact.flavor'
-			);
-			$img_labels = array();
-			foreach( $img['Labels'] as $k=>$v ) {
-				if( in_array( $k, $labels_hide ) ) continue;
-				$img_labels[]="<span title=\"{$k}\">{$v}</span>";
-			}
+
+                        $img_labels = array();
+                        foreach( $img['Labels'] as $k=>$v ) {
+                            if( in_array( $k, $labels_hide ) ) continue;        # review, what to display here ?
+                            $img_labels[]="<span title=\"{$k}\">{$v}</span>";   # show key when hovered over the value
+                        }
                     print "<td>".implode("<br />",$img_labels)."</td>";
                     print "</tr>\n";
 
@@ -566,7 +628,6 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
         <h1 class="section-title" id="containers">
             Containers <nbsp> <sup id="containers-span">0</sup>
             <a href="#top" class="back-to-top" aria-label="Back to top">
-                <!-- Simple up arrow SVG icon -->
                 <svg viewBox="0 0 24 24">
                 <path d="M12 4l-8 8h5v8h6v-8h5z"/>
                 </svg>
@@ -589,56 +650,46 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
                 </thead>
                 <tbody>
 
-                    <?php
+<?php
                 foreach ($containers as $c) {
-
-
-
-		    $ports=array();
+                    $ports=array();
                     foreach( $c['Ports'] as $k=>$p ) {
-			if( $p['IP']=="::" ) continue;
-
-			if( $p['PublicPort']<>'' ) $ports[$p['PublicPort']]++;
+                        if( $p['IP']=="::" ) continue;  # skip IPv6 for now - to-test: if IPv6 is enabled, re-check
+                        if( $p['PublicPort']<>'' ) $ports[$p['PublicPort']]++;
                     }
-		    ksort($ports);
+                    ksort($ports);
 
-
-
-		    foreach( $c['NetworkSettings']['Networks'] as $n=>$nn ) {
+                    foreach( $c['NetworkSettings']['Networks'] as $n=>$nn ) {
                         print "                    <tr>";
                         print "<td>".substr( $c['Names'][0], 1 )."</td>";
                         print "<td>".substr( $c['Id'], strpos($c['Id'], ":")+1, 12 )."</td>";
-                        print "<td>". ( str_contains($c['Image'], ":") ? ( str_contains($c['Image'], "sha256") ? substr( $c['ImageID'], strpos($c['ImageID'], ":")+1, 12 ) : substr( $c['Image'], 0, strpos($c['Image'], ":") ) ) : $c['Image'] )."</td>";
+                        print "<td>{$lut_images[$c['ImageID']]}</td>";
                         print "<td>".substr( $c['ImageID'], strpos($c['ImageID'], ":")+1, 12 )."</td>";
-
                         print "<td>{$n}</td>";
-			
                         print "<td>". ( $nn['IPPrefixLen']==0 ? "-" : "{$nn['IPAddress']}/{$nn['IPPrefixLen']}" ) ."</td>";
                         print "<td>". ( $c['State']=="running" ? $c['State'] : "<span style='font-style: italic'>".$c['State']."</span>" ) ."</td>";
-
-                        // print "<td>". str_replace( array('Up'), array("<span style='color: green;font-weight: bold'>".$img_used."</span>"), $c['Status'] ) ."</td>";
-                        // print "<td>". str_replace( array('Up','unhealthy','healthy'), array("<span style='color: green;'>Up</span>","<span style='color: red;'>unhealthy</span>","<span style='color: green;'>healthy</span>"), $c['Status'], 1 ) ."</td>";
-                        // print "<td>". str_replace( array('unhealthy','healthy'), array("<span style='color: red;'>unhealthy</span>","<span style='color: green;'>healthy</span>"), $c['Status'] ) ."</td>";
-
                         print "<td>". strtr( $c['Status'], array('unhealthy'=>"<span style='color: red;'>unhealthy</span>",'healthy'=>"<span style='color: green;'>healthy</span>") ) ."</td>";
-
-
-
                         print "<td style='text-align: right;'>".implode( " - ", array_keys($ports) )."</td>";
-
                         print "</tr>\n";
-		    }
+                    }
                 }
-                ?>
+?>
                 </tbody>
             </table>
         </div>
-
+    </div>
     <!-- ----------------------------------------------------------------------------------------------------------- -->
 
+    <div class="debug">
+    </div>
 
-
-        
+    <div class="footer" >
+        <p>
+            <a href="https://github.com/BartVanEynde/docker-networks">GitHub</a>
+            -
+            <a href="https://hub.docker.com/r/bartvaneynde/docker-networks">DockerHub</a>
+            -
+            <button id="toggleTheme">Switch to Light Mode</button></p>
     </div>
 
     <script>
@@ -705,10 +756,7 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
         // Search functionality for filtering rows
         const searchInput = document.getElementById('searchBar');
         const clearBtn = document.getElementById('clearSearchBtn');
-        // const tables = [document.getElementById('networks-table'), document.getElementById('ipam-table'), document.getElementById('ports-table'), document.getElementById('images-table'), document.getElementById('containers-table')];
-        // const table_ids = ['networks-table','ipam-table','ports-table','images-table','tablcontainers-table'];
         const table_ids = ['networks','ipam','ports','images','containers'];
-
 
         // Listen for input in the search bar
         searchInput.addEventListener('input', function () {
@@ -750,11 +798,6 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
             clearSearchAndCalculateSums() 
         });
 
-
-
-        
-
-
         // Toggle the navigation menu for mobile
         const hamburger = document.getElementById('hamburger');
         const menu = document.getElementById('menu');
@@ -775,23 +818,31 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
         window.onload = function() {
             clearSearchAndCalculateSums() 
         };
+
+
+        const body = document.body;
+        const button = document.getElementById('toggleTheme');
+
+        // Load saved theme from localStorage
+        if (localStorage.getItem('docker-networks-theme') === 'light') {
+            body.classList.add('light');
+            button.textContent = 'Switch to Dark Mode';
+        }
+
+        button.addEventListener('click', () => {
+            body.classList.toggle('light');
+            const isLight = body.classList.contains('light');
+            localStorage.setItem('docker-networks-theme', isLight ? 'light' : 'dark');
+            button.textContent = isLight ? 'Switch to Dark Mode' : 'Switch to Light Mode';
+        });
+
     </script>
 
 </body>
 </html>
 
 
-
-
-
-
-
-
-
-
-
-
-
+    <!-- ----------------------------------------------------------------------------------------------------------- -->
 
 <!-- network details
     <div>
@@ -804,6 +855,8 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
     <div>
 	<pre>
 	<?php print_r( $images ); ?>
+
+    <?php print_r( $lut_images ); ?>
 	</pre>
     </div>
 -->
