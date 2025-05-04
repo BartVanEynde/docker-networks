@@ -133,7 +133,7 @@ $containers = get_docker_data( 'http://localhost/v1.45/containers/json?all=1' );
             display: block;
             color: white;
             text-align: center;
-            padding: 16px;
+            padding: 0px 5px;
             text-decoration: none;
         }
 
