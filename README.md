@@ -25,8 +25,10 @@
 * Usage
   * Click any table-cell, and this will become a search/grep/filter: only rows containg this text will remain and empty tables will be removed.
     * Click the green 'clear' button in the Nav bar and you have your default start view
-  * Click the 'Docker Networks' title on the top left to refresh the json info
-    * As long if you don't do this all grep/filters are done with the same data
+  * Click a table header to sort it on that column, click it again to reverse-sort it.
+  * Click the 'Docker Networks' title on the top left to refresh the json info.
+    * As long if you don't do this all grep/filters are done with the same data.
+  * in the footer is a button to switch between dark(default) and lightmode.
 
 ## Links
 * https://github.com/BartVanEynde/docker-networks
@@ -55,6 +57,5 @@ networks:
 
 ## whishlist
 * IPv6
-* darkmode/lightmode
 * improve the javascript (numeric) search
 
